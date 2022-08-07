@@ -38,7 +38,7 @@ func New(eventRaw interface{}) *Config {
 
 	// Process Region
 	if region := getEnv("AWS_REGION", ""); region == "" {
-		log.Errorf("Required environment variable 'AWS_REGION' is empty. Please, specify", region)
+		log.Error("Required environment variable 'AWS_REGION' is empty. Please, specify it")
 		os.Exit(1)
 	} else {
 		config.Region = region
@@ -109,12 +109,12 @@ func New(eventRaw interface{}) *Config {
 	} else {
 		rotationDaysValue, err := strconv.Atoi(rotationDays)
 		if err != nil {
-			log.Error(fmt.Sprintf("Could not parse 'ROTATION_DAYS' variable'"), "error", err)
+			log.Errorf("Could not parse 'ROTATION_DAYS' variable. Error: %v", err)
 			os.Exit(1)
 		}
 
 		if rotationDaysValue == 0 {
-			log.Error(fmt.Sprintf("'ROTATION_DAYS' variable should be greater than 0"), "error", err)
+			log.Errorf("'ROTATION_DAYS' variable should be greater than 0. Error: %v", err)
 			os.Exit(1)
 		}
 
