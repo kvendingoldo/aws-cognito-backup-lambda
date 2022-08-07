@@ -12,9 +12,7 @@ import (
 	"github.com/kvendingoldo/aws-cognito-backup-lambda/internal/cloud"
 	"github.com/kvendingoldo/aws-cognito-backup-lambda/internal/config"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -33,38 +31,27 @@ func writeBackupToFile(fileName string, data []byte) error {
 	return nil
 }
 
-func uploadToS3(ctx context.Context, client *cloud.Client, bucketName, filePath, filePrefix, timestamp string) error {
-	uploadFile, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("could not open local filepath [%v]: %+v", filePath, err)
-	}
-
-	defer uploadFile.Close()
-
-	uploadFileInfo, _ := uploadFile.Stat()
-	var fileSize int64 = uploadFileInfo.Size()
-	fileBuffer := make([]byte, fileSize)
-	uploadFile.Read(fileBuffer)
-
-	var keyName string
-	if filePrefix == "" {
-		keyName = fmt.Sprintf("%v/%v", timestamp, filepath.Base(filePath))
-	} else {
-		keyName = fmt.Sprintf("%v/%v/%v", filePrefix, timestamp, filepath.Base(filePath))
-	}
-
-	_, err = client.S3Client.PutObject(ctx, &s3.PutObjectInput{
+func uploadToS3(ctx context.Context, client *cloud.Client, bucketName, keyName string, data []byte) error {
+	_, err := client.S3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:               aws.String(bucketName),
 		Key:                  aws.String(keyName),
 		ACL:                  types.ObjectCannedACLPrivate,
-		Body:                 bytes.NewReader(fileBuffer),
-		ContentLength:        fileSize,
-		ContentType:          aws.String(http.DetectContentType(fileBuffer)),
+		Body:                 bytes.NewReader(data),
 		ContentDisposition:   aws.String("attachment"),
 		ServerSideEncryption: types.ServerSideEncryptionAes256,
 	})
 	return err
+}
 
+func getKeyName(prefix, timestamp, name string) string {
+	var output string
+	if prefix == "" {
+		output = fmt.Sprintf("%v/%v", timestamp, name)
+	} else {
+		output = fmt.Sprintf("%v/%v/%v", prefix, timestamp, name)
+	}
+
+	return output
 }
 
 func Execute(config config.Config) {
@@ -91,12 +78,8 @@ func Execute(config config.Config) {
 		log.Error(fmt.Sprintf("Failed to marshal cognito users structure"), "error", err)
 		os.Exit(1)
 	}
-	err = writeBackupToFile("users.json", usersData)
-	if err != nil {
-		log.Error(fmt.Sprintf("Failed to write cognito users backup to disk"), "error", err)
-		os.Exit(1)
-	}
-	err = uploadToS3(ctx, client, config.BucketName, "./users.json", config.BackupPrefix, timestamp)
+
+	err = uploadToS3(ctx, client, config.BucketName, getKeyName(config.BackupPrefix, timestamp, "users.json"), usersData)
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to upload cognito users backup to S3"), "error", err)
 		os.Exit(1)
@@ -116,12 +99,8 @@ func Execute(config config.Config) {
 		log.Error(fmt.Sprintf("Failed to marshal cognito groups structure"), "error", err)
 		os.Exit(1)
 	}
-	err = writeBackupToFile("groups.json", groupsData)
-	if err != nil {
-		log.Error(fmt.Sprintf("Failed to write cognito groups backup to disk"), "error", err)
-		os.Exit(1)
-	}
-	err = uploadToS3(ctx, client, config.BucketName, "./groups.json", config.BackupPrefix, timestamp)
+
+	err = uploadToS3(ctx, client, config.BucketName, getKeyName(config.BackupPrefix, timestamp, "groups.json"), groupsData)
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to upload cognito groups backup to S3"), "error", err)
 		os.Exit(1)

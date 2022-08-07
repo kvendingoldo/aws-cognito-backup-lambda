@@ -125,19 +125,21 @@ func New(eventRaw interface{}) *Config {
 		config.RotationDays = rotationDaysValue
 	}
 
-	if getFromEvent {
-		if event.RotationDays == 0 {
-			log.Error("Event contains RotationDays == 0; This values should be greater that 0, or -1 if you want to disable rotation")
-			os.Exit(1)
-		} else {
-			if rotationDaysValue == 0 {
-				log.Error("RotationDays is empty; Configure it via 'ROTATION_DAYS' env variable OR pass in event body")
-				os.Exit(1)
-			} else {
-				config.RotationDays = event.RotationDays
-			}
-		}
-	}
+	fmt.Println(rotationDaysValue)
+	// TODO: please, rework this logic
+	//if getFromEvent {
+	//	if event.RotationDays == 0 {
+	//		log.Error("Event contains RotationDays == 0; This values should be greater that 0, or -1 if you want to disable rotation")
+	//		os.Exit(1)
+	//	} else {
+	//		if rotationDaysValue == 0 {
+	//			log.Error("RotationDays is empty; Configure it via 'ROTATION_DAYS' env variable OR pass in event body")
+	//			os.Exit(1)
+	//		} else {
+	//			config.RotationDays = event.RotationDays
+	//		}
+	//	}
+	//}
 
 	return &config
 }
