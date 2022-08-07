@@ -24,6 +24,9 @@ TODO
 ```shell
 export AWS_REGION=<REGION>
 export MODE=local
+export USER_POOL_ID=<USER_POOL_ID>
+export BUCKET_NAME=<S3_BUCKET_NAME>
+
 
 ```
 2. Run lambda locally
@@ -33,4 +36,26 @@ go run main.go
 
 ## Environment variables
 
-TODO
+* AWS_REGION
+   * Description: AWS Region. Inside of Lambda it's setting automatically by Lambda
+   * Possible values: <any valid AWS region>
+
+* MODE
+   * Description: mode of application running
+   * Possible values: cloud | local
+
+* USER_POOL_ID
+   * Description: ID of Cognito user pool
+   * Possible values: <any valid ID>
+
+* BUCKET_NAME
+   * Description: Name of S3 bucket
+   * Possible values: <any valid bucket name> 
+
+* BACKUP_PREFIX
+   * Description: Backup prefix
+   * Possible values: <any string>
+
+* ROTATION_DAYS
+   * Description: Max TTL for backups
+   * Possible values: any positive number, or -1 for disabling it
