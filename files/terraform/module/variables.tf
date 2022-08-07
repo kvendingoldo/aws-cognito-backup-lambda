@@ -54,14 +54,11 @@ variable "environ" {
 # Lambda events
 #
 variable "events" {
-  type        = list(object({
-    DomainName : string,
-    AcmeUrl : string,
-    AcmeEmail : string
-    ReImportThreshold : number,
-    IssueType : string
+  type = list(object({
+    UserPoolId : string,
+    BucketName : string
   }))
-  description = "List of events for Lambda function (each event contains info about one certificate)"
+  description = "List of events for Lambda function"
   default     = []
 }
 

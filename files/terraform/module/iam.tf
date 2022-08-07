@@ -61,10 +61,10 @@ resource "aws_iam_role_policy_attachment" "logging" {
 #
 # ACM policy
 #
-resource "aws_iam_policy" "acm" {
-  name        = format("%s-%s", var.blank_name, "acm")
+resource "aws_iam_policy" "cognito" {
+  name        = format("%s-%s", var.blank_name, "cognito")
   path        = "/"
-  description = "IAM policy for working with ACM from a lambda"
+  description = "IAM policy for working with Cognito from a lambda"
 
   policy = <<-POLICY
 {
@@ -72,12 +72,9 @@ resource "aws_iam_policy" "acm" {
   "Statement": [
     {
       "Action": [
-        "acm:AddTagsToCertificate",
-        "acm:DescribeCertificate",
-        "acm:GetCertificate",
-        "acm:ImportCertificate",
-        "acm:ListCertificates",
-        "acm:ListTagsForCertificate"
+        "cognito-identity:*",
+        "cognito-idp:*",
+        "cognito-sync:*"
       ],
       "Resource": "*",
       "Effect": "Allow"
@@ -86,18 +83,18 @@ resource "aws_iam_policy" "acm" {
 }
 POLICY
 }
-resource "aws_iam_role_policy_attachment" "acm" {
+resource "aws_iam_role_policy_attachment" "cognito" {
   role       = aws_iam_role.main.name
-  policy_arn = aws_iam_policy.acm.arn
+  policy_arn = aws_iam_policy.cognito.arn
 }
 
 #
 # Route53 policy
 #
-resource "aws_iam_policy" "route53" {
-  name        = format("%s-%s", var.blank_name, "route53")
+resource "aws_iam_policy" "s3" {
+  name        = format("%s-%s", var.blank_name, "s3")
   path        = "/"
-  description = "IAM policy for working with Route53 from a lambda"
+  description = "IAM policy for working with S3 from a lambda"
 
   policy = <<-POLICY
 {
@@ -105,10 +102,7 @@ resource "aws_iam_policy" "route53" {
   "Statement": [
     {
       "Action": [
-        "route53:ListHostedZonesByName",
-        "route53:ListResourceRecordSets",
-        "route53:GetChange",
-        "route53:ChangeResourceRecordSets"
+        "s3:*"
       ],
       "Resource": "*",
       "Effect": "Allow"
@@ -119,7 +113,7 @@ POLICY
 }
 resource "aws_iam_role_policy_attachment" "route53" {
   role       = aws_iam_role.main.name
-  policy_arn = aws_iam_policy.route53.arn
+  policy_arn = aws_iam_policy.s3.arn
 }
 
 

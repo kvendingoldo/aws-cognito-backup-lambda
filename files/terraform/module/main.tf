@@ -65,11 +65,8 @@ resource "aws_cloudwatch_event_target" "event_target" {
 
   input = <<-INPUT
 {
-"domain_name": "${each.value["DomainName"]}",
-"acme_url": "${each.value["AcmeUrl"]}",
-"acme_email": "${each.value["AcmeEmail"]}",
-"reimport_threshold": ${each.value["ReImportThreshold"]},
-"issue_type": "${each.value["IssueType"]}"
+"user_pool_id": "${each.value["UserPoolId"]}",
+"bucket_name": "${each.value["BucketName"]}"
 }
 INPUT
 }
