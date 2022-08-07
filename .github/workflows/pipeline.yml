@@ -8,7 +8,7 @@ on:
 
 env:
   registry_url: "registry.hub.docker.com"
-  image_repo: "kvendingoldo/aws-letsencrypt-lambda"
+  image_repo: "kvendingoldo/aws-cognito-backup-lambda"
 
 jobs:
   build:
