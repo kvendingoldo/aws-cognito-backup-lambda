@@ -11,6 +11,37 @@ import (
 	"os"
 )
 
+func init() {
+	log.SetReportCaller(false)
+
+	var formatter log.Formatter
+	if formatterType, ok := os.LookupEnv("FORMATTER_TYPE"); ok {
+		if formatterType == "JSON" {
+			formatter = &log.JSONFormatter{PrettyPrint: true}
+		}
+	}
+
+	if formatter == nil {
+		formatter = &log.TextFormatter{DisableColors: false}
+	}
+
+	log.SetFormatter(formatter)
+
+	var logLevel log.Level
+	var err error
+
+	if ll, ok := os.LookupEnv("LOG_LEVEL"); ok {
+		logLevel, err = log.ParseLevel(ll)
+		if err != nil {
+			logLevel = log.DebugLevel
+		}
+	} else {
+		logLevel = log.DebugLevel
+	}
+
+	log.SetLevel(logLevel)
+}
+
 func Handler(ctx context.Context, event types.Event) (types.Response, error) {
 	log.Infof("Handling labmda for event: %v", event)
 	config := cfg.New(event)
@@ -32,6 +63,9 @@ func main() {
 		} else if mode == "cloud" {
 			awsLambda.Start(Handler)
 		}
+	} else {
+		log.Errorf("Environment variable 'MODE' is unspecified. Please, specify it. Value should be 'local' or 'cloud'")
+		os.Exit(1)
 	}
 	log.Info("Lambda has completed")
 }

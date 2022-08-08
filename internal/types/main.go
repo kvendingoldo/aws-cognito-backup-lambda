@@ -9,5 +9,5 @@ type Event struct {
 	UserPoolId   string `json:"user_pool_id"`
 	BucketName   string `json:"bucket_name"`
 	BackupPrefix string `json:"backup_prefix"`
-	RotationDays int    `json:"rotation_days"`
+	RotationDays string `json:"rotation_days_limit"`
 }
