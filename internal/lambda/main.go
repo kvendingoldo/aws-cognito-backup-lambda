@@ -40,6 +40,40 @@ func getKeyName(prefix, timestamp, name string) string {
 	return output
 }
 
+func rotateBackups(ctx context.Context, client *cloud.Client, bucketName string, rotationDaysLimit int) error {
+	now := time.Now()
+	fmt.Println(now)
+
+	fmt.Println(bucketName)
+	objects, err := client.S3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucketName),
+	})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for _, obj := range objects.Contents {
+		diffDays := int(now.Sub(*obj.LastModified).Hours() / 24)
+		if diffDays >= rotationDaysLimit {
+			log.Infof("Object %v is %v days old. It's greater (or equal) than rotation days limit (%v days). Due to that it will be deleted", *obj.Key, diffDays, rotationDaysLimit)
+			_, err = client.S3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+				Bucket: aws.String(bucketName),
+				Key:    obj.Key,
+			})
+
+			if err != nil {
+				log.Warnf("Failed to delete %v from bucket %v. Error: %v", *obj.Key, bucketName, err)
+			} else {
+				log.Debugf("Object %v has been successfully deleted from bucket %v", *obj.Key, bucketName)
+			}
+		} else {
+			log.Debugf("Object %v is %v days old. It's less than rotation days limit (%v days). Due to that it will be skipped", *obj.Key, diffDays, rotationDaysLimit)
+		}
+	}
+
+	return nil
+}
+
 func Execute(config config.Config) {
 	client, err := cloud.New(context.TODO(), config.Region)
 	if err != nil {
@@ -90,5 +124,15 @@ func Execute(config config.Config) {
 	if err != nil {
 		log.Errorf("Failed to upload cognito groups backup to S3. Error: %v", err)
 		os.Exit(1)
+	}
+
+	if config.RotationDaysLimit != -1 {
+		err = rotateBackups(ctx, client, config.BucketName, config.RotationDaysLimit)
+		if err != nil {
+			log.Errorf("Rotation has been failed. Error: %v", err)
+			os.Exit(1)
+		}
+	} else {
+		log.Warnf("Pay attention that rotation is disabled; If you want to disable it, activate rotation via env variables, or event body")
 	}
 }

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/kvendingoldo/aws-cognito-backup-lambda/internal/types"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -9,11 +8,11 @@ import (
 )
 
 type Config struct {
-	Region       string
-	UserPoolId   string
-	BucketName   string
-	BackupPrefix string
-	RotationDays int
+	Region            string
+	UserPoolId        string
+	BucketName        string
+	BackupPrefix      string
+	RotationDaysLimit int
 }
 
 func getEnv(key, fallback string) string {
@@ -101,45 +100,51 @@ func New(eventRaw interface{}) *Config {
 	}
 
 	// Process RotationDays
-	rotationDays := getEnv("ROTATION_DAYS", "")
+	rotationDays := getEnv("ROTATION_DAYS_LIMIT", "")
 	var rotationDaysValue int
 
 	if rotationDays == "" {
-		log.Warnf("Environment variable 'ROTATION_DAYS' is empty")
+		log.Warnf("Environment variable 'ROTATION_DAYS_LIMIT' is empty")
+		config.RotationDaysLimit = -1
 	} else {
 		rotationDaysValue, err := strconv.Atoi(rotationDays)
 		if err != nil {
-			log.Errorf("Could not parse 'ROTATION_DAYS' variable. Error: %v", err)
+			log.Errorf("Could not parse 'ROTATION_DAYS_LIMIT' variable. Error: %v", err)
 			os.Exit(1)
 		}
 
 		if rotationDaysValue == 0 {
-			log.Errorf("'ROTATION_DAYS' variable should be greater than 0. Error: %v", err)
+			log.Errorf("'ROTATION_DAYS_LIMIT' variable should be greater than 0. Error: %v", err)
 			os.Exit(1)
 		}
 
 		if rotationDaysValue == -1 {
-			log.Warnf("Pay attention that 'ROTATION_DAYS' = -1, it means that rotation is disabled")
+			log.Warnf("Pay attention that 'ROTATION_DAYS_LIMIT' = -1, it means that rotation is disabled")
 		}
 
-		config.RotationDays = rotationDaysValue
+		config.RotationDaysLimit = rotationDaysValue
 	}
 
-	fmt.Println(rotationDaysValue)
-	// TODO: please, rework this logic
-	//if getFromEvent {
-	//	if event.RotationDays == 0 {
-	//		log.Error("Event contains RotationDays == 0; This values should be greater that 0, or -1 if you want to disable rotation")
-	//		os.Exit(1)
-	//	} else {
-	//		if rotationDaysValue == 0 {
-	//			log.Error("RotationDays is empty; Configure it via 'ROTATION_DAYS' env variable OR pass in event body")
-	//			os.Exit(1)
-	//		} else {
-	//			config.RotationDays = event.RotationDays
-	//		}
-	//	}
-	//}
+	if getFromEvent {
+		if event.RotationDays == "" {
+			log.Error("Event contains empty RotationDays")
+			if config.RotationDaysLimit == 0 {
+				config.RotationDaysLimit = -1
+			}
+		} else {
+			if rotationDaysValue != 0 {
+				rotationDaysEventValue, err := strconv.Atoi(event.RotationDays)
+				if err != nil {
+					log.Errorf("Could not parse RotationDays variable from event. Error: %v", err)
+					os.Exit(1)
+				}
+				config.RotationDaysLimit = rotationDaysEventValue
+			} else {
+				log.Error("RotationDays is empty; Configure it via 'ROTATION_DAYS_LIMIT' env variable OR pass in event body")
+				os.Exit(1)
+			}
+		}
+	}
 
 	return &config
 }
