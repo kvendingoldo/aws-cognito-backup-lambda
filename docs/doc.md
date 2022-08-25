@@ -17,9 +17,14 @@ TODO
 
 ```json
 {
-  "user_pool_id": "<USER_POOL_ID>",
+  "cognito_user_pool_id": "<USER_POOL_ID>",
+  "cognito_region": "<REGION>",
+  
   "bucket_name": "<BUCKET_NAME>",
   "backup_prefix": "<can be escaped or any valid string>",
+  "bucket_region": "<can be escaped; If so lambda region will be used>",
+  
+  "rotation_enabled": true,
   "rotation_days_limit": "<can be escaped or any valid number string>"
 }
 ```

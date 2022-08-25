@@ -8,10 +8,17 @@ import (
 )
 
 type Config struct {
-	Region            string
-	UserPoolId        string
-	BucketName        string
-	BackupPrefix      string
+	AWSRegion string
+
+	CognitoUserPoolId string
+	CognitoRegion     string
+
+	S3BucketName   string
+	S3BucketRegion string
+
+	BackupPrefix string
+
+	RotationEnabled   bool
 	RotationDaysLimit int
 }
 
@@ -23,7 +30,8 @@ func getEnv(key, fallback string) string {
 }
 
 func New(eventRaw interface{}) *Config {
-	var config = Config{}
+	var config = &Config{}
+
 	var getFromEvent bool
 	var event types.Event
 
@@ -35,65 +43,104 @@ func New(eventRaw interface{}) *Config {
 		getFromEvent = false
 	}
 
-	// Process Region
-	if region := getEnv("AWS_REGION", ""); region == "" {
-		log.Error("Required environment variable 'AWS_REGION' is empty. Please, specify it")
-		os.Exit(1)
+	// Process AWSRegion
+	if awsRegion := getEnv("AWS_REGION", ""); awsRegion != "" {
+		config.AWSRegion = awsRegion
 	} else {
-		config.Region = region
+		log.Warn("Environment variable AWS_REGION is empty")
 	}
-
-	// Process UserPoolId
-	userPoolId := getEnv("USER_POOL_ID", "")
-	if userPoolId == "" {
-		log.Warnf("Environment variable 'USER_POOL_ID' is empty")
-	} else {
-		config.UserPoolId = userPoolId
-	}
-
 	if getFromEvent {
-		if event.UserPoolId == "" {
-			log.Warnf("Event contains empty user_pool_id")
-			if userPoolId == "" {
-				log.Error("UserPoolId is empty; Configure it via 'USER_POOL_ID' env variable OR pass in event body")
+		if event.AWSRegion == "" {
+			if config.AWSRegion == "" {
+				log.Error("awsRegion is empty; Configure it via 'AWS_REGION' env variable OR pass in event body")
 				os.Exit(1)
 			}
 		} else {
-			config.UserPoolId = event.UserPoolId
+			config.AWSRegion = event.AWSRegion
 		}
 	}
 
-	// Process BucketName
-	bucketName := getEnv("BUCKET_NAME", "")
-	if bucketName == "" {
-		log.Warnf("Environment variable 'BUCKET_NAME' is empty")
+	// Process CognitoRegion
+	if cognitoRegion := getEnv("COGNITO_REGION", ""); cognitoRegion != "" {
+		config.CognitoRegion = cognitoRegion
 	} else {
-		config.BucketName = bucketName
+		log.Warn("Environment variable 'COGNITO_REGION' is empty")
+	}
+	if getFromEvent {
+		if event.CognitoRegion == "" {
+			log.Warn("Event contains empty cognitoRegion variable")
+			if config.CognitoRegion == "" {
+				log.Warnf("cognitoRegion is empty; Default region %s will be used", config.AWSRegion)
+				config.CognitoRegion = config.AWSRegion
+			}
+		} else {
+			config.CognitoRegion = event.CognitoRegion
+		}
 	}
 
+	// Process S3BucketRegion
+	if bucketRegion := getEnv("BUCKET_REGION", ""); bucketRegion != "" {
+		config.S3BucketRegion = bucketRegion
+	} else {
+		log.Warn("Environment variable 'BUCKET_REGION' is empty")
+	}
 	if getFromEvent {
-		if event.BucketName == "" {
-			log.Warnf("Event contains empty bucket_name")
-			if bucketName == "" {
-				log.Error("BucketName is empty; Configure it via 'BUCKET_NAME' env variable OR pass in event body")
+		if event.S3BucketRegion == "" {
+			log.Warn("Event contains empty s3BucketRegion variable")
+			if config.S3BucketRegion == "" {
+				log.Warnf("bucketRegion is empty; Default region %s will be used", config.AWSRegion)
+				config.S3BucketRegion = config.AWSRegion
+			}
+		} else {
+			config.S3BucketRegion = event.CognitoRegion
+		}
+	}
+
+	// Process CognitoUserPoolId
+	if cognitoUserPoolId := getEnv("COGNITO_USER_POOL_ID", ""); cognitoUserPoolId != "" {
+		config.CognitoUserPoolId = cognitoUserPoolId
+	} else {
+		log.Warn("Environment variable 'COGNITO_USER_POOL_ID' is empty")
+	}
+	if getFromEvent {
+		if event.CognitoUserPoolId == "" {
+			log.Warn("Event contains empty cognitoUserPoolID")
+			if config.CognitoUserPoolId == "" {
+				log.Error("cognitoUserPoolID is empty; Configure it via 'COGNITO_USER_POOL_ID' env variable OR pass in event body")
 				os.Exit(1)
 			}
 		} else {
-			config.BucketName = event.BucketName
+			config.CognitoUserPoolId = event.CognitoUserPoolId
 		}
 	}
 
-	// Process backupPrefix
-	backupPrefix := getEnv("BACKUP_PREFIX", "")
-	if backupPrefix == "" {
-		log.Warnf("Environment variable 'BACKUP_PREFIX' is empty")
+	// Process S3BucketName
+	if s3BucketName := getEnv("S3_BUCKET_NAME", ""); s3BucketName != "" {
+		config.S3BucketName = s3BucketName
 	} else {
+		log.Warn("Environment variable 'S3_BUCKET_NAME' is empty")
+	}
+	if getFromEvent {
+		if event.S3BucketName == "" {
+			log.Warn("Event contains empty s3BucketName")
+			if config.S3BucketName == "" {
+				log.Error("BucketName is empty; Configure it via 'S3_BUCKET_NAME' env variable OR pass in event body")
+				os.Exit(1)
+			}
+		} else {
+			config.S3BucketName = event.S3BucketName
+		}
+	}
+
+	// Process BackupPrefix
+	if backupPrefix := getEnv("BACKUP_PREFIX", ""); backupPrefix != "" {
 		config.BackupPrefix = backupPrefix
+	} else {
+		log.Warn("Environment variable 'BACKUP_PREFIX' is empty")
 	}
-
 	if getFromEvent {
 		if event.BackupPrefix == "" {
-			log.Warnf("Event contains empty backup_prefix")
+			log.Warnf("Event contains empty backupPrefix")
 		} else {
 			config.BackupPrefix = event.BackupPrefix
 		}
@@ -146,5 +193,5 @@ func New(eventRaw interface{}) *Config {
 		}
 	}
 
-	return &config
+	return config
 }
