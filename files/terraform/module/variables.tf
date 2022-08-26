@@ -54,10 +54,7 @@ variable "environ" {
 # Lambda events
 #
 variable "events" {
-  type = list(object({
-    UserPoolId : string,
-    BucketName : string
-  }))
+  type        = any
   description = "List of events for Lambda function"
   default     = []
 }

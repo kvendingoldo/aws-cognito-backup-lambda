@@ -21,6 +21,6 @@ type Event struct {
 
 	BackupPrefix string `json:"backupPrefix"`
 
-	RotationEnabled null.Bool `json:"rotation_enabled"`
-	RotationDays    string    `json:"rotation_days_limit"`
+	RotationEnabled   null.Bool `json:"rotationEnabled"`
+	RotationDaysLimit null.Int  `json:"rotationDaysLimit"`
 }

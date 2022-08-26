@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/guregu/null"
 	"github.com/kvendingoldo/aws-cognito-backup-lambda/internal/types"
 	log "github.com/sirupsen/logrus"
 	"os"
@@ -18,8 +19,8 @@ type Config struct {
 
 	BackupPrefix string
 
-	RotationEnabled   bool
-	RotationDaysLimit int
+	RotationEnabled   null.Bool
+	RotationDaysLimit int64
 }
 
 func getEnv(key, fallback string) string {
@@ -79,10 +80,10 @@ func New(eventRaw interface{}) *Config {
 	}
 
 	// Process S3BucketRegion
-	if bucketRegion := getEnv("BUCKET_REGION", ""); bucketRegion != "" {
+	if bucketRegion := getEnv("S3_BUCKET_REGION", ""); bucketRegion != "" {
 		config.S3BucketRegion = bucketRegion
 	} else {
-		log.Warn("Environment variable 'BUCKET_REGION' is empty")
+		log.Warn("Environment variable 'S3_BUCKET_REGION' is empty")
 	}
 	if getFromEvent {
 		if event.S3BucketRegion == "" {
@@ -146,50 +147,51 @@ func New(eventRaw interface{}) *Config {
 		}
 	}
 
-	// Process RotationDays
-	rotationDays := getEnv("ROTATION_DAYS_LIMIT", "")
-	var rotationDaysValue int
-
-	if rotationDays == "" {
-		log.Warnf("Environment variable 'ROTATION_DAYS_LIMIT' is empty")
-		config.RotationDaysLimit = -1
-	} else {
-		rotationDaysValue, err := strconv.Atoi(rotationDays)
+	// Process RotationEnabled
+	if rotationEnabled := getEnv("ROTATION_ENABLED", ""); rotationEnabled != "" {
+		rotationEnabledValue, err := strconv.ParseBool(rotationEnabled)
 		if err != nil {
-			log.Errorf("Could not parse 'ROTATION_DAYS_LIMIT' variable. Error: %v", err)
+			log.Errorf("Could not parse 'ROTATION_ENABLED' variable. Error: %v", err)
 			os.Exit(1)
 		}
 
-		if rotationDaysValue == 0 {
-			log.Errorf("'ROTATION_DAYS_LIMIT' variable should be greater than 0. Error: %v", err)
-			os.Exit(1)
+		config.RotationEnabled = null.NewBool(rotationEnabledValue, true)
+	} else {
+		log.Warn("Environment variable 'ROTATION_ENABLED' is empty; Rotation will be disabled")
+	}
+	if getFromEvent {
+		if event.RotationEnabled.Valid {
+			config.RotationEnabled = event.RotationEnabled
+		} else {
+			if !config.RotationEnabled.Valid {
+				log.Warn("rotationEnabled is not specified; Rotation will be disabled")
+				config.RotationEnabled = null.NewBool(false, true)
+			}
 		}
-
-		if rotationDaysValue == -1 {
-			log.Warnf("Pay attention that 'ROTATION_DAYS_LIMIT' = -1, it means that rotation is disabled")
-		}
-
-		config.RotationDaysLimit = rotationDaysValue
 	}
 
-	if getFromEvent {
-		if event.RotationDays == "" {
-			log.Error("Event contains empty RotationDays")
-			if config.RotationDaysLimit == 0 {
-				config.RotationDaysLimit = -1
+	if config.RotationEnabled.Bool {
+		// Process RotationDaysLimit
+		if getFromEvent {
+			if event.RotationDaysLimit.Valid {
+				config.RotationDaysLimit = event.RotationDaysLimit.Int64
 			}
 		} else {
-			if rotationDaysValue != 0 {
-				rotationDaysEventValue, err := strconv.Atoi(event.RotationDays)
+			if rotationDaysLimit := getEnv("ROTATION_DAYS_LIMIT", ""); rotationDaysLimit != "" {
+				rotationDaysValue, err := strconv.ParseInt(rotationDaysLimit, 10, 64)
 				if err != nil {
-					log.Errorf("Could not parse RotationDays variable from event. Error: %v", err)
+					log.Errorf("Could not parse 'ROTATION_DAYS_LIMIT' variable. Error: %v", err)
 					os.Exit(1)
 				}
-				config.RotationDaysLimit = rotationDaysEventValue
+				config.RotationDaysLimit = rotationDaysValue
 			} else {
-				log.Error("RotationDays is empty; Configure it via 'ROTATION_DAYS_LIMIT' env variable OR pass in event body")
-				os.Exit(1)
+				log.Warnf("Environment variable 'ROTATION_DAYS_LIMIT' is empty")
 			}
+		}
+
+		if config.RotationDaysLimit == 0 {
+			log.Error("RotationDaysLimit variable should be greater than 0")
+			os.Exit(1)
 		}
 	}
 

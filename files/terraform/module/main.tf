@@ -63,10 +63,5 @@ resource "aws_cloudwatch_event_target" "event_target" {
   rule = aws_cloudwatch_event_rule.schedule[each.key].name
   arn  = aws_lambda_function.main.arn
 
-  input = <<-INPUT
-{
-"user_pool_id": "${each.value["UserPoolId"]}",
-"bucket_name": "${each.value["BucketName"]}"
-}
-INPUT
+  input = jsonencode(each.value)
 }
