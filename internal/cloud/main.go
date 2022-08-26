@@ -10,18 +10,21 @@ import (
 type Client struct {
 	CognitoClient *cognitoidentityprovider.Client
 	S3Client      *s3.Client
-	Region        string
 }
 
-func New(ctx context.Context, region string) (*Client, error) {
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+func New(ctx context.Context, cognitoRegion, s3BucketRegion string) (*Client, error) {
+	cognitoCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(cognitoRegion))
+	if err != nil {
+		return nil, err
+	}
+
+	s3Cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(s3BucketRegion))
 	if err != nil {
 		return nil, err
 	}
 
 	return &Client{
-		CognitoClient: cognitoidentityprovider.NewFromConfig(cfg),
-		S3Client:      s3.NewFromConfig(cfg),
-		Region:        region,
+		CognitoClient: cognitoidentityprovider.NewFromConfig(cognitoCfg),
+		S3Client:      s3.NewFromConfig(s3Cfg),
 	}, nil
 }

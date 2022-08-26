@@ -6,7 +6,7 @@ resource "aws_lambda_function" "main" {
   description   = var.description
   tags          = var.tags
 
-  role         = aws_iam_role.main.arn
+  role         = var.create_iam_role ? aws_iam_role.main.arn : var.iam_role_arn
   image_uri    = var.image_uri
   package_type = "Image"
   timeout      = var.timeout
@@ -29,7 +29,7 @@ resource "aws_cloudwatch_log_group" "main" {
   name = "/aws/lambda/${var.blank_name}"
   tags = var.tags
 
-  retention_in_days = var.retention
+  retention_in_days = var.log_retention_in_days
   depends_on        = [aws_lambda_function.main]
 }
 
@@ -63,10 +63,5 @@ resource "aws_cloudwatch_event_target" "event_target" {
   rule = aws_cloudwatch_event_rule.schedule[each.key].name
   arn  = aws_lambda_function.main.arn
 
-  input = <<-INPUT
-{
-"user_pool_id": "${each.value["UserPoolId"]}",
-"bucket_name": "${each.value["BucketName"]}"
-}
-INPUT
+  input = jsonencode(each.value)
 }

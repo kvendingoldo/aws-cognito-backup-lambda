@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.15.15
 	github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider v1.18.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.27.2
+	github.com/guregu/null v4.0.0+incompatible
 	github.com/sirupsen/logrus v1.9.0
 )
 

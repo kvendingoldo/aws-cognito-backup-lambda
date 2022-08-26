@@ -40,7 +40,7 @@ func getKeyName(prefix, timestamp, name string) string {
 	return output
 }
 
-func rotateBackups(ctx context.Context, client *cloud.Client, bucketName string, rotationDaysLimit int) error {
+func rotateBackups(ctx context.Context, client *cloud.Client, bucketName string, rotationDaysLimit int64) error {
 	now := time.Now()
 	fmt.Println(now)
 
@@ -53,7 +53,7 @@ func rotateBackups(ctx context.Context, client *cloud.Client, bucketName string,
 	}
 
 	for _, obj := range objects.Contents {
-		diffDays := int(now.Sub(*obj.LastModified).Hours() / 24)
+		diffDays := int64(now.Sub(*obj.LastModified).Hours() / 24)
 		if diffDays >= rotationDaysLimit {
 			log.Infof("Object %v is %v days old. It's greater (or equal) than rotation days limit (%v days). Due to that it will be deleted", *obj.Key, diffDays, rotationDaysLimit)
 			_, err = client.S3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
@@ -75,7 +75,7 @@ func rotateBackups(ctx context.Context, client *cloud.Client, bucketName string,
 }
 
 func Execute(config config.Config) {
-	client, err := cloud.New(context.TODO(), config.Region)
+	client, err := cloud.New(context.TODO(), config.CognitoRegion, config.S3BucketRegion)
 	if err != nil {
 		log.Errorf("Could not create AWS client. Error: %v", err)
 		os.Exit(1)
@@ -86,7 +86,7 @@ func Execute(config config.Config) {
 
 	// Backup Cognito users
 	users, err := client.CognitoClient.ListUsers(ctx, &cognitoidentityprovider.ListUsersInput{
-		UserPoolId: aws.String(config.UserPoolId),
+		UserPoolId: aws.String(config.CognitoUserPoolId),
 	})
 	if err != nil {
 		log.Errorf("Failed to get list of cognito users. Error: %v", err)
@@ -99,7 +99,7 @@ func Execute(config config.Config) {
 		os.Exit(1)
 	}
 
-	err = uploadToS3(ctx, client, config.BucketName, getKeyName(config.BackupPrefix, timestamp, "users.json"), usersData)
+	err = uploadToS3(ctx, client, config.S3BucketName, getKeyName(config.BackupPrefix, timestamp, "users.json"), usersData)
 	if err != nil {
 		log.Errorf("Failed to upload cognito users backup to S3. Error: %v", err)
 		os.Exit(1)
@@ -107,7 +107,7 @@ func Execute(config config.Config) {
 
 	// Backup Cognito groups
 	groups, err := client.CognitoClient.ListGroups(ctx, &cognitoidentityprovider.ListGroupsInput{
-		UserPoolId: aws.String(config.UserPoolId),
+		UserPoolId: aws.String(config.CognitoUserPoolId),
 	})
 	if err != nil {
 		log.Errorf("Failed to get list of cognito groups. Error: %v", err)
@@ -120,14 +120,14 @@ func Execute(config config.Config) {
 		os.Exit(1)
 	}
 
-	err = uploadToS3(ctx, client, config.BucketName, getKeyName(config.BackupPrefix, timestamp, "groups.json"), groupsData)
+	err = uploadToS3(ctx, client, config.S3BucketName, getKeyName(config.BackupPrefix, timestamp, "groups.json"), groupsData)
 	if err != nil {
 		log.Errorf("Failed to upload cognito groups backup to S3. Error: %v", err)
 		os.Exit(1)
 	}
 
-	if config.RotationDaysLimit != -1 {
-		err = rotateBackups(ctx, client, config.BucketName, config.RotationDaysLimit)
+	if config.RotationEnabled.Bool {
+		err = rotateBackups(ctx, client, config.S3BucketName, config.RotationDaysLimit)
 		if err != nil {
 			log.Errorf("Rotation has been failed. Error: %v", err)
 			os.Exit(1)

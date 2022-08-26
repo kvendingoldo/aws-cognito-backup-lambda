@@ -51,13 +51,24 @@ variable "environ" {
 }
 
 #
+# IAM configuration
+#
+variable "create_iam_role" {
+  description = "Create IAM role with a defined name that permits Lambda to work with S3 & Cognito"
+  type        = bool
+  default     = false
+}
+variable "iam_role_arn" {
+  description = "The ARN for the IAM role that permits Lambda to work with S3 & Cognito. Must be specified if monitoring_interval is non-zero"
+  type        = string
+  default     = null
+}
+
+#
 # Lambda events
 #
 variable "events" {
-  type = list(object({
-    UserPoolId : string,
-    BucketName : string
-  }))
+  type        = any
   description = "List of events for Lambda function"
   default     = []
 }
@@ -78,7 +89,7 @@ variable "cron_schedule" {
 #
 # Logging
 #
-variable "retention" {
+variable "log_retention_in_days" {
   type        = number
   description = "Number of days to retain log events in the specified log group"
   default     = 7
