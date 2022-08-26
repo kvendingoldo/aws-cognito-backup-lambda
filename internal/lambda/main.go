@@ -126,7 +126,7 @@ func Execute(config config.Config) {
 		os.Exit(1)
 	}
 
-	if config.RotationDaysLimit != -1 {
+	if config.RotationEnabled.Bool {
 		err = rotateBackups(ctx, client, config.S3BucketName, config.RotationDaysLimit)
 		if err != nil {
 			log.Errorf("Rotation has been failed. Error: %v", err)

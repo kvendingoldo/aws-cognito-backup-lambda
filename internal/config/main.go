@@ -88,7 +88,7 @@ func New(eventRaw interface{}) *Config {
 	}
 	if getFromEvent {
 		if event.S3BucketRegion != "" {
-			config.S3BucketRegion = event.CognitoRegion
+			config.S3BucketRegion = event.S3BucketRegion
 		} else {
 			log.Warn("Event contains empty s3BucketRegion variable")
 		}
@@ -142,7 +142,7 @@ func New(eventRaw interface{}) *Config {
 	}
 	if getFromEvent {
 		if event.BackupPrefix == "" {
-			log.Warnf("Event contains empty backupPrefix")
+			log.Warn("Event contains empty backupPrefix")
 		} else {
 			config.BackupPrefix = event.BackupPrefix
 		}

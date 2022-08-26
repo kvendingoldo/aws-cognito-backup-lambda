@@ -4,12 +4,6 @@
    work with any other docker registry except ECR.
 2. Apply TF module into your infrastructure
 
-#### Example of input variables for Terraform module
-
-```terraform
-TODO
-```
-
 ### How to trigger lambda manually via UI
 
 1. Go to Lambda function that has been created via Terraform -> Tests
@@ -32,7 +26,7 @@ TODO
 }
 ```
 
-Example #1:
+#### Example #1:
 
 ```json
 {
@@ -42,7 +36,7 @@ Example #1:
 }
 ```
 
-Example #2:
+#### Example #2:
 
 ```json
 {
