@@ -18,7 +18,7 @@ func init() {
 
 	if formatterType, ok := os.LookupEnv("FORMATTER_TYPE"); ok {
 		if formatterType == "JSON" {
-			formatter = &log.JSONFormatter{PrettyPrint: true}
+			formatter = &log.JSONFormatter{PrettyPrint: false}
 		}
 
 		if formatterType == "TEXT" {
