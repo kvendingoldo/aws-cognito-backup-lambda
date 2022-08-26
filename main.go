@@ -15,9 +15,14 @@ func init() {
 	log.SetReportCaller(false)
 
 	var formatter log.Formatter
+
 	if formatterType, ok := os.LookupEnv("FORMATTER_TYPE"); ok {
 		if formatterType == "JSON" {
 			formatter = &log.JSONFormatter{PrettyPrint: true}
+		}
+
+		if formatterType == "TEXT" {
+			formatter = &log.TextFormatter{DisableColors: false}
 		}
 	}
 

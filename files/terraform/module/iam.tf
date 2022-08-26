@@ -1,4 +1,6 @@
 resource "aws_iam_role" "main" {
+  count = var.create_iam_role ? 1 : 0
+
   name               = var.blank_name
   description        = "IAM role for for Lambda ${var.blank_name}"
   tags               = var.tags
@@ -23,8 +25,9 @@ resource "aws_iam_role" "main" {
 # VPC permissions
 #
 resource "aws_iam_role_policy_attachment" "vpc_permissions" {
-  count      = length(var.subnet_ids) != 0 ? 1 : 0
-  role       = aws_iam_role.main.name
+  count      = (length(var.subnet_ids) != 0 && var.create_iam_role) ? 1 : 0
+
+  role       = aws_iam_role.main[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
@@ -32,6 +35,8 @@ resource "aws_iam_role_policy_attachment" "vpc_permissions" {
 # Logging policy
 #
 resource "aws_iam_policy" "logging" {
+  count = var.create_iam_role ? 1 : 0
+
   name        = format("%s-%s", var.blank_name, "logging")
   path        = "/"
   description = "IAM policy for logging from a lambda"
@@ -54,17 +59,21 @@ resource "aws_iam_policy" "logging" {
 POLICY
 }
 resource "aws_iam_role_policy_attachment" "logging" {
-  role       = aws_iam_role.main.name
-  policy_arn = aws_iam_policy.logging.arn
+  count = var.create_iam_role ? 1 : 0
+
+  role       = aws_iam_role.main[0].name
+  policy_arn = aws_iam_policy.logging[0].arn
 }
 
 #
-# ACM policy
+# Cognito policy
 #
 resource "aws_iam_policy" "cognito" {
+  count = var.create_iam_role ? 1 : 0
+
   name        = format("%s-%s", var.blank_name, "cognito")
   path        = "/"
-  description = "IAM policy for working with Cognito from a lambda"
+  description = "IAM policy for working with Cognito from the Lambda"
 
   policy = <<-POLICY
 {
@@ -84,17 +93,21 @@ resource "aws_iam_policy" "cognito" {
 POLICY
 }
 resource "aws_iam_role_policy_attachment" "cognito" {
-  role       = aws_iam_role.main.name
-  policy_arn = aws_iam_policy.cognito.arn
+  count = var.create_iam_role ? 1 : 0
+
+  role       = aws_iam_role.main[0].name
+  policy_arn = aws_iam_policy.cognito[0].arn
 }
 
 #
-# Route53 policy
+# S3 policy
 #
 resource "aws_iam_policy" "s3" {
+  count = var.create_iam_role ? 1 : 0
+
   name        = format("%s-%s", var.blank_name, "s3")
   path        = "/"
-  description = "IAM policy for working with S3 from a lambda"
+  description = "IAM policy for working with S3 from the Lambda"
 
   policy = <<-POLICY
 {
@@ -112,8 +125,10 @@ resource "aws_iam_policy" "s3" {
 POLICY
 }
 resource "aws_iam_role_policy_attachment" "route53" {
-  role       = aws_iam_role.main.name
-  policy_arn = aws_iam_policy.s3.arn
+  count = var.create_iam_role ? 1 : 0
+
+  role       = aws_iam_role.main[0].name
+  policy_arn = aws_iam_policy.s3[0].arn
 }
 
 

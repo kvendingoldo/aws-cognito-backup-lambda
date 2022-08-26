@@ -6,7 +6,7 @@ resource "aws_lambda_function" "main" {
   description   = var.description
   tags          = var.tags
 
-  role         = aws_iam_role.main.arn
+  role         = var.create_iam_role ? aws_iam_role.main.arn : var.iam_role_arn
   image_uri    = var.image_uri
   package_type = "Image"
   timeout      = var.timeout
@@ -29,7 +29,7 @@ resource "aws_cloudwatch_log_group" "main" {
   name = "/aws/lambda/${var.blank_name}"
   tags = var.tags
 
-  retention_in_days = var.retention
+  retention_in_days = var.log_retention_in_days
   depends_on        = [aws_lambda_function.main]
 }
 

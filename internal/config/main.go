@@ -51,14 +51,15 @@ func New(eventRaw interface{}) *Config {
 		log.Warn("Environment variable AWS_REGION is empty")
 	}
 	if getFromEvent {
-		if event.AWSRegion == "" {
-			if config.AWSRegion == "" {
-				log.Error("awsRegion is empty; Configure it via 'AWS_REGION' env variable OR pass in event body")
-				os.Exit(1)
-			}
-		} else {
+		if event.AWSRegion != "" {
 			config.AWSRegion = event.AWSRegion
+		} else {
+			log.Warn("Event contains empty awsRegion variable")
 		}
+	}
+	if config.AWSRegion == "" {
+		log.Error("awsRegion is empty; Configure it via 'AWS_REGION' env variable OR pass in event body")
+		os.Exit(1)
 	}
 
 	// Process CognitoRegion
@@ -68,15 +69,15 @@ func New(eventRaw interface{}) *Config {
 		log.Warn("Environment variable 'COGNITO_REGION' is empty")
 	}
 	if getFromEvent {
-		if event.CognitoRegion == "" {
-			log.Warn("Event contains empty cognitoRegion variable")
-			if config.CognitoRegion == "" {
-				log.Warnf("cognitoRegion is empty; Default region %s will be used", config.AWSRegion)
-				config.CognitoRegion = config.AWSRegion
-			}
-		} else {
+		if event.CognitoRegion != "" {
 			config.CognitoRegion = event.CognitoRegion
+		} else {
+			log.Warn("Event contains empty cognitoRegion variable")
 		}
+	}
+	if config.CognitoRegion == "" {
+		log.Warnf("cognitoRegion is empty; Default region %s will be used", config.AWSRegion)
+		config.CognitoRegion = config.AWSRegion
 	}
 
 	// Process S3BucketRegion
@@ -86,15 +87,15 @@ func New(eventRaw interface{}) *Config {
 		log.Warn("Environment variable 'S3_BUCKET_REGION' is empty")
 	}
 	if getFromEvent {
-		if event.S3BucketRegion == "" {
-			log.Warn("Event contains empty s3BucketRegion variable")
-			if config.S3BucketRegion == "" {
-				log.Warnf("bucketRegion is empty; Default region %s will be used", config.AWSRegion)
-				config.S3BucketRegion = config.AWSRegion
-			}
-		} else {
+		if event.S3BucketRegion != "" {
 			config.S3BucketRegion = event.CognitoRegion
+		} else {
+			log.Warn("Event contains empty s3BucketRegion variable")
 		}
+	}
+	if config.S3BucketRegion == "" {
+		log.Warnf("bucketRegion is empty; Default region %s will be used", config.AWSRegion)
+		config.S3BucketRegion = config.AWSRegion
 	}
 
 	// Process CognitoUserPoolId
@@ -104,15 +105,15 @@ func New(eventRaw interface{}) *Config {
 		log.Warn("Environment variable 'COGNITO_USER_POOL_ID' is empty")
 	}
 	if getFromEvent {
-		if event.CognitoUserPoolId == "" {
-			log.Warn("Event contains empty cognitoUserPoolID")
-			if config.CognitoUserPoolId == "" {
-				log.Error("cognitoUserPoolID is empty; Configure it via 'COGNITO_USER_POOL_ID' env variable OR pass in event body")
-				os.Exit(1)
-			}
-		} else {
+		if event.CognitoUserPoolId != "" {
 			config.CognitoUserPoolId = event.CognitoUserPoolId
+		} else {
+			log.Warn("Event contains empty cognitoUserPoolID")
 		}
+	}
+	if config.CognitoUserPoolId == "" {
+		log.Error("cognitoUserPoolID is empty; Configure it via 'COGNITO_USER_POOL_ID' env variable OR pass in event body")
+		os.Exit(1)
 	}
 
 	// Process S3BucketName
@@ -122,15 +123,15 @@ func New(eventRaw interface{}) *Config {
 		log.Warn("Environment variable 'S3_BUCKET_NAME' is empty")
 	}
 	if getFromEvent {
-		if event.S3BucketName == "" {
-			log.Warn("Event contains empty s3BucketName")
-			if config.S3BucketName == "" {
-				log.Error("BucketName is empty; Configure it via 'S3_BUCKET_NAME' env variable OR pass in event body")
-				os.Exit(1)
-			}
-		} else {
+		if event.S3BucketName != "" {
 			config.S3BucketName = event.S3BucketName
+		} else {
+			log.Warn("Event contains empty s3BucketName")
 		}
+	}
+	if config.S3BucketName == "" {
+		log.Error("BucketName is empty; Configure it via 'S3_BUCKET_NAME' env variable OR pass in event body")
+		os.Exit(1)
 	}
 
 	// Process BackupPrefix
@@ -157,35 +158,36 @@ func New(eventRaw interface{}) *Config {
 
 		config.RotationEnabled = null.NewBool(rotationEnabledValue, true)
 	} else {
-		log.Warn("Environment variable 'ROTATION_ENABLED' is empty; Rotation will be disabled")
+		log.Warn("Environment variable 'ROTATION_ENABLED' is empty")
 	}
 	if getFromEvent {
 		if event.RotationEnabled.Valid {
 			config.RotationEnabled = event.RotationEnabled
-		} else {
-			if !config.RotationEnabled.Valid {
-				log.Warn("rotationEnabled is not specified; Rotation will be disabled")
-				config.RotationEnabled = null.NewBool(false, true)
-			}
 		}
+	}
+	if !config.RotationEnabled.Valid {
+		log.Warn("rotationEnabled is not specified; Rotation will be disabled")
+		config.RotationEnabled = null.NewBool(false, true)
 	}
 
 	if config.RotationEnabled.Bool {
 		// Process RotationDaysLimit
+
+		if rotationDaysLimit := getEnv("ROTATION_DAYS_LIMIT", ""); rotationDaysLimit != "" {
+			rotationDaysValue, err := strconv.ParseInt(rotationDaysLimit, 10, 64)
+			if err != nil {
+				log.Errorf("Could not parse 'ROTATION_DAYS_LIMIT' variable. Error: %v", err)
+				os.Exit(1)
+			}
+
+			config.RotationDaysLimit = rotationDaysValue
+		} else {
+			log.Warnf("Environment variable 'ROTATION_DAYS_LIMIT' is empty")
+		}
+
 		if getFromEvent {
 			if event.RotationDaysLimit.Valid {
 				config.RotationDaysLimit = event.RotationDaysLimit.Int64
-			}
-		} else {
-			if rotationDaysLimit := getEnv("ROTATION_DAYS_LIMIT", ""); rotationDaysLimit != "" {
-				rotationDaysValue, err := strconv.ParseInt(rotationDaysLimit, 10, 64)
-				if err != nil {
-					log.Errorf("Could not parse 'ROTATION_DAYS_LIMIT' variable. Error: %v", err)
-					os.Exit(1)
-				}
-				config.RotationDaysLimit = rotationDaysValue
-			} else {
-				log.Warnf("Environment variable 'ROTATION_DAYS_LIMIT' is empty")
 			}
 		}
 
