@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"github.com/guregu/null"
 	"github.com/kvendingoldo/aws-cognito-backup-lambda/internal/types"
 	log "github.com/sirupsen/logrus"
@@ -11,7 +12,7 @@ import (
 type Config struct {
 	AWSRegion string
 
-	CognitoUserPoolId string
+	CognitoUserPoolID string
 	CognitoRegion     string
 
 	S3BucketName   string
@@ -23,14 +24,17 @@ type Config struct {
 	RotationDaysLimit int64
 }
 
+//nolint:unparam
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}
+
 	return fallback
 }
 
-func New(eventRaw interface{}) *Config {
+//nolint:gocyclo
+func New(eventRaw interface{}) (*Config, error) {
 	var config = &Config{}
 
 	var getFromEvent bool
@@ -58,8 +62,7 @@ func New(eventRaw interface{}) *Config {
 		}
 	}
 	if config.AWSRegion == "" {
-		log.Error("awsRegion is empty; Configure it via 'AWS_REGION' env variable OR pass in event body")
-		os.Exit(1)
+		return nil, fmt.Errorf("awsRegion is empty; Configure it via 'AWS_REGION' env variable OR pass in event body")
 	}
 
 	// Process CognitoRegion
@@ -98,22 +101,21 @@ func New(eventRaw interface{}) *Config {
 		config.S3BucketRegion = config.AWSRegion
 	}
 
-	// Process CognitoUserPoolId
-	if cognitoUserPoolId := getEnv("COGNITO_USER_POOL_ID", ""); cognitoUserPoolId != "" {
-		config.CognitoUserPoolId = cognitoUserPoolId
+	// Process CognitoUserPoolID
+	if cognitoUserPoolID := getEnv("COGNITO_USER_POOL_ID", ""); cognitoUserPoolID != "" {
+		config.CognitoUserPoolID = cognitoUserPoolID
 	} else {
 		log.Warn("Environment variable 'COGNITO_USER_POOL_ID' is empty")
 	}
 	if getFromEvent {
-		if event.CognitoUserPoolId != "" {
-			config.CognitoUserPoolId = event.CognitoUserPoolId
+		if event.CognitoUserPoolID != "" {
+			config.CognitoUserPoolID = event.CognitoUserPoolID
 		} else {
-			log.Warn("Event contains empty cognitoUserPoolID")
+			log.Warn("Event contains empty cognitoUserPoolId")
 		}
 	}
-	if config.CognitoUserPoolId == "" {
-		log.Error("cognitoUserPoolID is empty; Configure it via 'COGNITO_USER_POOL_ID' env variable OR pass in event body")
-		os.Exit(1)
+	if config.CognitoUserPoolID == "" {
+		return nil, fmt.Errorf("cognitoUserPoolId is empty; Configure it via 'COGNITO_USER_POOL_ID' env variable OR pass in event body")
 	}
 
 	// Process S3BucketName
@@ -130,8 +132,7 @@ func New(eventRaw interface{}) *Config {
 		}
 	}
 	if config.S3BucketName == "" {
-		log.Error("BucketName is empty; Configure it via 'S3_BUCKET_NAME' env variable OR pass in event body")
-		os.Exit(1)
+		return nil, fmt.Errorf("BucketName is empty; Configure it via 'S3_BUCKET_NAME' env variable OR pass in event body")
 	}
 
 	// Process BackupPrefix
@@ -152,8 +153,8 @@ func New(eventRaw interface{}) *Config {
 	if rotationEnabled := getEnv("ROTATION_ENABLED", ""); rotationEnabled != "" {
 		rotationEnabledValue, err := strconv.ParseBool(rotationEnabled)
 		if err != nil {
-			log.Errorf("Could not parse 'ROTATION_ENABLED' variable. Error: %v", err)
-			os.Exit(1)
+			//nolint:stylecheck
+			return nil, fmt.Errorf("Could not parse 'ROTATION_ENABLED' variable. Error: %w", err)
 		}
 
 		config.RotationEnabled = null.NewBool(rotationEnabledValue, true)
@@ -176,8 +177,8 @@ func New(eventRaw interface{}) *Config {
 		if rotationDaysLimit := getEnv("ROTATION_DAYS_LIMIT", ""); rotationDaysLimit != "" {
 			rotationDaysValue, err := strconv.ParseInt(rotationDaysLimit, 10, 64)
 			if err != nil {
-				log.Errorf("Could not parse 'ROTATION_DAYS_LIMIT' variable. Error: %v", err)
-				os.Exit(1)
+				//nolint:stylecheck
+				return nil, fmt.Errorf("Could not parse 'ROTATION_DAYS_LIMIT' variable. Error: %w", err)
 			}
 
 			config.RotationDaysLimit = rotationDaysValue
@@ -192,10 +193,9 @@ func New(eventRaw interface{}) *Config {
 		}
 
 		if config.RotationDaysLimit == 0 {
-			log.Error("RotationDaysLimit variable should be greater than 0")
-			os.Exit(1)
+			return nil, fmt.Errorf("RotationDaysLimit variable should be greater than 0")
 		}
 	}
 
-	return config
+	return config, nil
 }

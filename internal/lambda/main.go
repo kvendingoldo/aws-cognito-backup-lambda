@@ -25,6 +25,7 @@ func uploadToS3(ctx context.Context, client *cloud.Client, bucketName, keyName s
 		ServerSideEncryption: types.ServerSideEncryptionAes256,
 		Tagging:              aws.String(fmt.Sprintf("producer=%v", lambdaAwsTag)),
 	})
+
 	return err
 }
 
@@ -41,14 +42,12 @@ func getKeyName(prefix, timestamp, name string) string {
 
 func rotateBackups(ctx context.Context, client *cloud.Client, bucketName string, rotationDaysLimit int64) error {
 	now := time.Now()
-	fmt.Println(now)
 
-	fmt.Println(bucketName)
 	objects, err := client.S3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucketName),
 	})
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 
 	for _, obj := range objects.Contents {
@@ -76,51 +75,59 @@ func rotateBackups(ctx context.Context, client *cloud.Client, bucketName string,
 func Execute(ctx context.Context, config config.Config) error {
 	client, err := cloud.New(ctx, config.CognitoRegion, config.S3BucketRegion)
 	if err != nil {
-		return fmt.Errorf("Could not create AWS client. Error: %s", err)
+		//nolint:stylecheck
+		return fmt.Errorf("Could not create AWS client. Error: %w", err)
 	}
 
 	timestamp := time.Now().Format(time.RFC3339)
 
 	// Backup Cognito users
 	users, err := client.CognitoClient.ListUsers(ctx, &cognitoidentityprovider.ListUsersInput{
-		UserPoolId: aws.String(config.CognitoUserPoolId),
+		UserPoolId: aws.String(config.CognitoUserPoolID),
 	})
 	if err != nil {
-		return fmt.Errorf("Failed to get list of cognito users. Error: %v", err)
+		//nolint:stylecheck
+		return fmt.Errorf("Failed to get list of cognito users. Error: %w", err)
 	}
 
 	usersData, err := json.Marshal(users)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal cognito users structure. Error: %v", err)
+		//nolint:stylecheck
+		return fmt.Errorf("Failed to marshal cognito users structure. Error: %w", err)
 	}
 
 	err = uploadToS3(ctx, client, config.S3BucketName, getKeyName(config.BackupPrefix, timestamp, "users.json"), usersData)
 	if err != nil {
-		return fmt.Errorf("Failed to upload cognito users backup to S3. Error: %v", err)
+		//nolint:stylecheck
+		return fmt.Errorf("Failed to upload cognito users backup to S3. Error: %w", err)
 	}
 
 	// Backup Cognito groups
 	groups, err := client.CognitoClient.ListGroups(ctx, &cognitoidentityprovider.ListGroupsInput{
-		UserPoolId: aws.String(config.CognitoUserPoolId),
+		UserPoolId: aws.String(config.CognitoUserPoolID),
 	})
 	if err != nil {
-		return fmt.Errorf("Failed to get list of cognito groups. Error: %v", err)
+		//nolint:stylecheck
+		return fmt.Errorf("Failed to get list of cognito groups. Error: %w", err)
 	}
 
 	groupsData, err := json.Marshal(groups)
 	if err != nil {
-		return fmt.Errorf("Failed to marshal cognito groups structure. Error: %v", err)
+		//nolint:stylecheck
+		return fmt.Errorf("Failed to marshal cognito groups structure. Error: %w", err)
 	}
 
 	err = uploadToS3(ctx, client, config.S3BucketName, getKeyName(config.BackupPrefix, timestamp, "groups.json"), groupsData)
 	if err != nil {
-		return fmt.Errorf("Failed to upload cognito groups backup to S3. Error: %v", err)
+		//nolint:stylecheck
+		return fmt.Errorf("Failed to upload cognito groups backup to S3. Error: %w", err)
 	}
 
 	if config.RotationEnabled.Bool {
 		err = rotateBackups(ctx, client, config.S3BucketName, config.RotationDaysLimit)
 		if err != nil {
-			return fmt.Errorf("Rotation has been failed. Error: %v", err)
+			//nolint:stylecheck
+			return fmt.Errorf("Rotation has been failed. Error: %w", err)
 		}
 	} else {
 		log.Warnf("Pay attention that rotation is disabled; If you want to disable it, activate rotation via env variables, or event body")
