@@ -22,7 +22,7 @@ variable "cognito_backup_lambda_cron_schedule" {
   default = "rate(168 hours)"
 }
 variable "cognito_backup_lambda_image_uri" {
-  default = "<YOUR_ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com/aws-cognito_backup_lambda:rc-0.1.0"
+  default = "<YOUR_ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com/aws-cognito_backup_lambda:<VERSION>"
 }
 variable "cognito_backup_lambda_events" {
   default = [
